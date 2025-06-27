@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>LinkVault - Enhanced Bookmark Manager</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Yuji+Syuku&family=Sawarabi+Mincho&display=swap" rel="stylesheet"/>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box;}
+      body{font-family:'Segoe UI', sans-serif;background:linear-gradient(135deg,#f4f4f4 0%,#e0e0e0 50%,#dcdcdc 100%);min-height:100vh;padding:20px;overflow-x:hidden;color:#333;position:relative;transition: background 0.3s, color 0.3s;}
+      .header{text-align:center;margin-bottom:30px;position:relative;z-index:10;}
+      .header h1{font-family:'Segoe UI', sans-serif;color:#2c3e50;font-size:3.5rem;font-weight:600;text-shadow:2px 2px 4px rgba(44,62,80,0.3);position:relative;}
+      .header p{color:#34495e;font-size:1.2rem;font-style:italic;margin-top:10px;}
+      .container{max-width:1400px;margin:0 auto;position:relative;z-index:10;}
+      .controls-bar { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; background: rgba(255,255,255,0.7); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+      .controls-bar input[type="text"], .controls-bar select { padding:10px 16px;border-radius:12px;border:2px solid rgba(212,102,155,0.4);background:rgba(255,255,255,0.75);backdrop-filter:blur(8px);font-family:'Sawarabi Mincho', serif;color:#d4669b;font-size:0.95rem; flex: 1; min-width: 150px;}
+      .controls-bar .btn-group { display: flex; gap: 8px; flex-wrap: wrap;}
+      .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:24px;}
+      .link-box{background:rgba(255,255,255,0.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:16px;padding:24px;height:160px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;cursor:pointer;border:2px solid rgba(100,100,100,0.3);box-shadow:0 8px 25px rgba(44,62,80,0.1);position:relative;overflow:hidden;opacity: 1;transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background-color 0.3s ease;}
+      .link-box:hover{transform:translateY(-12px) scale(1.05);box-shadow:0 15px 35px rgba(44,62,80,0.25);border-color:rgba(100,100,100,0.6);background:rgba(255,255,255,0.85);}
+      .link-box.empty{border:2px dashed rgba(44,62,80,0.4);color:#34495e;background:rgba(255,240,250,0.6);}
+      .link-box.empty:hover{border-color:#2c3e50;color:#2c3e50;background:rgba(255,240,250,0.9);}
+      .link-content{text-align:center;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;}
+      .link-logo{width:36px;height:36px;border-radius:12px;margin-bottom:8px;object-fit:cover;box-shadow:0 4px 12px rgba(44,62,80,0.2);border:2px solid rgba(255,255,255,0.8);}
+      .link-title{font-size:1rem;font-weight:600;color:#2c3e50;margin-bottom:2px;line-height:1.3;word-break:break-word;max-height:2.6em;overflow:hidden;}
+      .link-url{font-size:0.85rem;color:#34495e;opacity:0.9;word-break:break-all;max-height:1.4em;overflow:hidden;}
+      .tags-container { width: 100%; text-align: center; margin-top: auto; padding-top: 5px; height: 25px; overflow: hidden; }
+      .tag-pill { display: inline-block; background: rgba(44,62,80,0.1); color: #2c3e50; border: 1px solid rgba(44,62,80,0.4); padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin: 2px; }
+      .add-icon{font-size:2.5rem;color:rgba(44,62,80,0.6);margin-bottom:8px; transition: transform 0.3s ease, color 0.3s ease;}
+      .link-box.empty:hover .add-icon{color:#2c3e50;transform:scale(1.1) rotate(90deg);}
+      .link-box.empty div:last-of-type{font-size:0.8rem;font-weight:600;}
+      .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(44,62,80,0.3);backdrop-filter:blur(8px);z-index:1000;}
+      .modal.show{display:flex;align-items:center;justify-content:center;}
+      .modal-content{background:rgba(255,255,255,0.9);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);padding:35px;border-radius:20px;border:2px solid rgba(100,100,100,0.5);width:90%;max-width:480px;box-shadow:0 15px 40px rgba(44,62,80,0.2);position:relative; transition: background-color 0.3s ease;}
+      .modal h2{margin-bottom:25px;color:#2c3e50;font-family:'Segoe UI', sans-serif;font-size:1.8rem;font-weight:500;text-align:center;}
+      .form-group{margin-bottom:20px;}
+      .form-group label{display:block;margin-bottom:8px;color:#34495e;font-weight:600;font-size:0.9rem;}
+      .form-group input, .form-group textarea {width:100%;padding:12px 16px;border:2px solid rgba(44,62,80,0.3);background:rgba(255,255,255,0.7);border-radius:12px;font-size:0.95rem;font-family:'Segoe UI', sans-serif;color:#2c3e50; transition: background-color 0.3s ease, border-color 0.3s ease;}
+      .form-group textarea { resize: vertical; min-height: 60px; }
+      .form-group input:focus, .form-group textarea:focus {outline:none;border-color:#2c3e50;box-shadow:0 0 0 4px rgba(44,62,80,0.2);background:rgba(255,255,255,0.9);}
+      .form-buttons{display:flex;gap:12px;justify-content:flex-end;margin-top:10px; flex-wrap: wrap;}
+      .btn{padding:10px 18px;border:none;border-radius:12px;font-size:0.85rem;font-weight:600;cursor:pointer;position:relative;overflow:hidden; transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease, color 0.2s ease;}
+      .btn:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(0,0,0,0.15);}
+      .btn-primary{background:linear-gradient(135deg,#2c3e50,#ff99cc);color:white;border:2px solid rgba(255,255,255,0.3);}
+      .btn-primary:hover{background:linear-gradient(135deg,#c55590,#ff80b3);}
+      .btn-secondary{background:rgba(255,240,250,0.8);color:#34495e;border:2px solid rgba(44,62,80,0.3);}
+      .btn-secondary:hover{background:rgba(255,240,250,1);border-color:#2c3e50;}
+      .btn-danger{background:linear-gradient(135deg,#ff8fab,#ff6b94);color:white;border:2px solid rgba(255,255,255,0.3);}
+      .btn-danger:hover{background:linear-gradient(135deg,#ff7a9a,#ff5983);}
+      .delete-btn{position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#ff8fab,#ff6b94);color:white;border:2px solid rgba(255,255,255,0.7);border-radius:50%;width:26px;height:26px;cursor:pointer;font-size:0.9rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(255,107,148,0.3);opacity:0;transform:scale(0.8); transition: opacity 0.2s ease, transform 0.2s ease;}
+      .link-box:hover .delete-btn{opacity:1;transform:scale(1);}
+      .delete-btn:hover{background:linear-gradient(135deg,#ff7a9a,#ff5983);transform:scale(1.1)!important;}
+      .ask-ai-btn {position: absolute;bottom: 8px;right: 8px;background: linear-gradient(135deg, #007bff, #0056b3);color: white;border: 2px solid rgba(255, 255, 255, 0.7);border-radius: 50%;width: 26px;height: 26px;cursor: pointer;font-size: 0.9rem;display: flex;align-items: center;justify-content: center;box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);opacity: 0;transform: scale(0.8);transition: opacity 0.2s ease, transform 0.2s ease;}
+      .link-box:hover .ask-ai-btn {opacity: 1;transform: scale(1);}
+      .ask-ai-btn:hover {background: linear-gradient(135deg, #0056b3, #003d7a);transform: scale(1.1) !important;}
+      @media (max-width:768px){ .grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:16px;} .header h1{font-size:2.5rem;} .header p{font-size:1rem;} .controls-bar{flex-direction: column; align-items: stretch;} .controls-bar input[type="text"],.controls-bar select,.controls-bar .btn-group {width: 100%;} .controls-bar .btn-group button { flex-grow: 1;} }
+      body.dark { background:linear-gradient(135deg,#3a3a3a 0%,#2c2c2c 50%,#1e1e1e 100%); color: #e0e0e0; }
+      body.dark .header h1 { color: #e0e0e0; text-shadow:2px 2px 4px rgba(0,0,0,0.5); }
+      body.dark .header p { color: #b0b0b0; }
+      body.dark .controls-bar { background: rgba(45,45,45,0.7); }
+      body.dark .controls-bar input[type="text"], body.dark .controls-bar select { border-color: rgba(180,180,180,0.5); background: rgba(50,50,50,0.75); color: #ffcce6; }
+      body.dark .link-box { background: rgba(30,30,30,0.85); border-color: rgba(150,150,150,0.4); box-shadow:0 8px 25px rgba(0,0,0,0.3); }
+      body.dark .link-box:hover { background: rgba(45,45,45,0.95); border-color: rgba(180,180,180,0.7); }
+      body.dark .link-box.empty { background: rgba(40,35,40,0.7); border-color: rgba(100,100,100,0.5); color: #9e9e9e; }
+      body.dark .link-box.empty:hover { background: rgba(50,45,50,0.9); border-color: #b0b0b0; color: #e0e0e0; }
+      body.dark .link-title { color: #e0e0e0; }
+      body.dark .link-url { color: #a0a0a0; }
+      body.dark .tags-container .tag-pill { background: rgba(180,180,180,0.15); color: #c0c0c0; border-color: rgba(180,180,180,0.4); }
+      body.dark .link-logo { border-color: rgba(50,50,50,0.8); }
+      body.dark .add-icon { color:rgba(180,180,180,0.6); }
+      body.dark .link-box.empty:hover .add-icon { color:#e0e0e0; }
+      body.dark .modal-content { background:rgba(42,42,42,0.9); border-color: rgba(120,120,120,0.6); }
+      body.dark .modal h2 { color: #e0e0e0; }
+      body.dark .form-group label { color: #b0b0b0; }
+      body.dark .form-group input, body.dark .form-group textarea { background:rgba(50,50,50,0.7); border-color: rgba(100,100,100,0.4); color: #e0e0e0; }
+      body.dark .form-group input:focus, body.dark .form-group textarea:focus { border-color: #ff99cc; box-shadow:0 0 0 4px rgba(255,153,204,0.25); background:rgba(55,55,55,0.9); }
+      body.dark .btn-secondary { background:rgba(60,60,60,0.8); color: #d0d0d0; border-color: rgba(100,100,100,0.5); }
+      body.dark .btn-secondary:hover { background:rgba(70,70,70,1); border-color: #e0e0e0; }
+      body.dark .ask-ai-btn { background: linear-gradient(135deg, #1a73e8, #0b50b8); border-color: rgba(255,255,255,0.7); }
+      body.dark .ask-ai-btn:hover { background: linear-gradient(135deg, #0b50b8, #083e8a); }
+      body.dark #searchInput { border-color: rgba(212,102,155,0.6); background: rgba(40,40,40,0.75); color: #ffcce6; }
+      body.dark label[for="darkModeToggle"], body.dark .darkModeLabelClass { color: #e0e0e0; }
+      .notification-bar { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background-color: #2c3e50; color: white; padding: 12px 25px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.5s ease, visibility 0.5s ease, transform 0.5s ease; font-size: 0.9rem; }
+      .notification-bar.show { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+      body.dark .notification-bar { background-color: #ff99cc; color: #2c3e50; }
+      .summary-modal .modal-content {max-width: 600px;height: auto;max-height: 80vh; overflow-y: auto;}
+      .summary-modal h2 {margin-bottom: 20px;}
+      .summary-modal-text {font-size: 1rem;line-height: 1.6;color: #34495e;white-space: pre-wrap;word-wrap: break-word;}
+      body.dark .summary-modal-text {color: #e0e0e0;}
+      .ask-link-modal .modal-content {max-width: 600px;}
+      .ask-link-modal .link-info {margin-bottom: 15px;padding: 10px;background: rgba(240, 240, 240, 0.7);border-radius: 10px;border: 1px solid rgba(200, 200, 200, 0.5);word-break: break-word;}
+      .ask-link-modal .link-info strong {color: #2c3e50;}
+      .ask-link-modal .link-info span {font-size: 0.85rem;color: #34495e;}
+      .ask-link-modal .answer-area {min-height: 100px;background: rgba(255, 255, 255, 0.8);border: 1px solid rgba(44, 62, 80, 0.3);border-radius: 12px;padding: 15px;margin-top: 15px;font-size: 0.95rem;color: #2c3e50;white-space: pre-wrap;word-wrap: break-word;overflow-y: auto;max-height: 200px;}
+      body.dark .ask-link-modal .link-info {background: rgba(60, 60, 60, 0.7);border-color: rgba(100, 100, 100, 0.5);}
+      body.dark .ask-link-modal .link-info strong {color: #e0e0e0;}
+      body.dark .ask-link-modal .link-info span {color: #b0b0b0;}
+      body.dark .ask-link-modal .answer-area {background: rgba(50, 50, 50, 0.8);border-color: rgba(100, 100, 100, 0.4);color: #e0e0e0;}
+      .find-sites-modal .modal-content {max-width: 700px;height: auto;max-height: 90vh;overflow-y: auto;}
+      .find-sites-modal .answer-area {border: 1px solid rgba(44, 62, 80, 0.3);border-radius: 12px;padding: 15px;margin-top: 15px;background: rgba(255, 255, 255, 0.8);color: #2c3e50;}
+      .find-sites-modal .answer-area h3 {margin-top: 15px;margin-bottom: 8px;color: #2c3e50;font-size: 1.1rem;border-bottom: 1px dashed rgba(44, 62, 80, 0.2);padding-bottom: 5px;}
+      .find-sites-modal .answer-area ul {list-style: none;padding: 0;margin: 0;}
+      .find-sites-modal .answer-area ul li {margin-bottom: 5px;padding: 5px 0;border-bottom: 1px dotted rgba(44, 62, 80, 0.1);}
+      .find-sites-modal .answer-area ul li:last-child {border-bottom: none;}
+      .find-sites-modal .answer-area ul li a {color: #007bff;text-decoration: none;font-weight: 600;}
+      .find-sites-modal .answer-area ul li a:hover {text-decoration: underline;}
+      .find-sites-modal .answer-area ul li span {font-size: 0.85rem;color: #34495e;display: block;}
+      body.dark .find-sites-modal .answer-area {background: rgba(50, 50, 50, 0.8);border-color: rgba(100, 100, 100, 0.4);color: #e0e0e0;}
+      body.dark .find-sites-modal .answer-area h3 {color: #ff99cc;border-bottom-color: rgba(255, 153, 204, 0.3);}
+      body.dark .find-sites-modal .answer-area ul li a {color: #8ac2ff;}
+      body.dark .find-sites-modal .answer-area ul li span {color: #b0b0b0;}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>LinkVault</h1> <p>Your Enhanced Bookmark Sanctuary</p>
+</div>
+
+<div class="container">
+  <div class="controls-bar">
+    <input id="searchInput" placeholder="🔍 Search or ask a question..." type="text"/>
+    <div class="btn-group">
+        <button class="btn btn-primary" id="smartSearchBtn">✨ Smart Search</button>
+        <button class="btn btn-primary" id="summarizeCollectionBtn">✨ Summarize Collection</button>
+        <button class="btn btn-primary" id="findSitesFeatureBtn">🌐 Find Sites</button>
+        <select id="sortOptions" class="btn btn-secondary" style="padding-right: 30px;"> <option value="default">Sort by...</option>
+            <option value="name_asc">Name (A-Z)</option>
+            <option value="name_desc">Name (Z-A)</option>
+            <option value="date_asc">Date (Oldest)</option>
+            <option value="date_desc">Date (Newest)</option>
+        </select>
+        <button class="btn btn-secondary" id="removeDuplicatesBtn">🗑️ Deduplicate</button>
+        <button class="btn btn-danger" id="removeAllBtn">💥 Remove All</button>
+    </div>
+    <div class="btn-group"> <button class="btn btn-secondary" id="exportBtn">⬇️ Export JSON</button>
+        <input accept=".json" id="importInput" style="display:none;" type="file"/>
+        <button class="btn btn-secondary" id="importBtn">⬆️ Import JSON</button>
+        <button class="btn btn-secondary" id="exportHtmlBtn">📤 Export HTML</button>
+        <input accept=".html" id="importHtmlInput" style="display:none;" type="file"/>
+        <button class="btn btn-secondary" id="importHtmlBtn">📁 Import HTML</button>
+        <label for="darkModeToggle" class="btn btn-secondary" style="display:flex;align-items:center;gap:5px; cursor:pointer; padding: 10px 15px;">
+            <input id="darkModeToggle" type="checkbox" style="margin-right: 5px;"/>🌙
+        </label>
+    </div>
+  </div>
+
+  <div class="grid" id="linkGrid"></div>
+</div>
+
+<div class="modal" id="linkModal">
+  <div class="modal-content">
+    <h2 id="modalTitle">Add New Link</h2>
+    <form id="linkForm">
+      <div class="form-group">
+        <label for="linkUrl">🔗 Website URL</label>
+        <input id="linkUrl" placeholder="example.com or any text" required="" type="text"/>
+      </div>
+      <div class="form-group">
+        <label for="linkTitle">📝 Custom Title (optional)</label>
+        <input id="linkTitle" placeholder="Leave empty to auto-fetch" type="text"/>
+      </div>
+       <div class="form-group">
+        <label for="linkTags">🏷️ Tags (comma-separated)</label>
+        <input id="linkTags" placeholder="e.g., webdev, tutorial, design" type="text"/>
+      </div>
+      <div class="form-group">
+        <label for="linkDescription">📄 Description (optional)</label>
+        <textarea id="linkDescription" placeholder="A brief summary of the link..."></textarea>
+      </div>
+      <div class="form-buttons">
+        <button class="btn btn-secondary" id="cancelBtn" type="button">Cancel</button>
+        <button class="btn btn-danger" id="modalDeleteBtn" style="display: none;" type="button">Delete</button>
+        <button class="btn btn-primary" id="generateDetailsBtn" type="button">✨ Auto-Fill Details</button>
+        <button class="btn btn-primary" id="saveBtn" type="submit">Save Link</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal summary-modal" id="summaryModal">
+    <div class="modal-content">
+        <h2>✨ Collection Summary</h2>
+        <div id="summaryText" class="summary-modal-text"></div>
+        <div class="form-buttons">
+            <button class="btn btn-primary" id="closeSummaryModalBtn" type="button">Close</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal ask-link-modal" id="askLinkModal">
+    <div class="modal-content">
+        <h2>❓ Ask About This Link</h2>
+        <div class="link-info">
+            <strong>Title:</strong> <span id="askLinkTitle"></span><br>
+            <strong>URL:</strong> <span id="askLinkUrl"></span>
+        </div>
+        <div class="form-group">
+            <label for="askQuestionInput">Your Question:</label>
+            <input type="text" id="askQuestionInput" placeholder="e.g., What is this link about?" />
+        </div>
+        <div class="form-buttons">
+            <button class="btn btn-secondary" id="closeAskLinkModalBtn" type="button">Close</button>
+            <button class="btn btn-primary" id="askLinkBtn">Ask AI</button>
+        </div>
+        <div class="answer-area" id="askLinkAnswer">Answer will appear here...</div>
+    </div>
+</div>
+
+<div class="modal find-sites-modal" id="findSitesModal">
+    <div class="modal-content">
+        <h2>🌐 Find Sites</h2>
+        <div class="form-group">
+            <label for="findSitesPrompt">What kind of sites are you looking for?</label>
+            <input type="text" id="findSitesPrompt" placeholder="e.g., free photo editing software" />
+        </div>
+        <div class="form-buttons">
+            <button class="btn btn-secondary" id="closeFindSitesModalBtn" type="button">Close</button>
+            <button class="btn btn-primary" id="searchSitesBtn">Search Sites</button>
+        </div>
+        <div id="findSitesResults" class="answer-area" style="min-height: 150px; margin-top: 20px;">
+        </div>
+    </div>
+</div>
+
+<div class="notification-bar" id="notificationBar">Notification Message</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+  let globalLinkManager = null;
+
+  function showNotification(message, duration = 3000) {
+    const notificationBar = document.getElementById('notificationBar');
+    if (!notificationBar) return;
+    notificationBar.textContent = message;
+    notificationBar.classList.add('show');
+    setTimeout(() => {
+        notificationBar.classList.remove('show');
+    }, duration);
+  }
+
+  async function callGeminiAPI(prompt, generationConfig = {}) {
+      const payload = {
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: {
+              temperature: 0.5,
+              ...generationConfig,
+          }
+      };
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+
+      try {
+          const response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+              throw new Error(`API Error: ${response.status} ${response.statusText}`);
+          }
+          const result = await response.json();
+          if (result.candidates && result.candidates.length > 0 && result.candidates[0].content.parts.length > 0) {
+              return result.candidates[0].content.parts[0].text;
+          } else {
+              throw new Error("Invalid API response structure.");
+          }
+      } catch (error) {
+          console.error("Gemini API Call Error:", error);
+          showNotification("An error occurred while contacting the AI.", 4000);
+          return null;
+      }
+  }
+
+
+  class LinkManager {
+    constructor() {
+      this.links = this.loadLinks();
+      this.currentEditIndex = null;
+      this.totalBoxes = Math.max(24, Object.keys(this.links).length + 1);
+      this.DEFAULT_FAVICON = "https://img.icons8.com/fluency/48/bookmark.png";
+      this.init();
+    }
+
+    init() {
+      this.createGrid();
+      this.setupEventListeners();
+      this.renderLinks();
+    }
+
+    createGrid() {
+      const grid = document.getElementById('linkGrid');
+      grid.innerHTML = '';
+      for (let i = 0; i < this.totalBoxes; i++) {
+        const linkBox = document.createElement('div');
+        linkBox.dataset.index = i;
+        linkBox.className = 'link-box';
+        grid.appendChild(linkBox);
+      }
+    }
+
+    setupEventListeners() {
+      document.getElementById('linkForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.saveLink();
+      });
+      document.getElementById('cancelBtn').addEventListener('click', () => this.closeModal());
+      document.getElementById('modalDeleteBtn').addEventListener('click', () => {
+        if (this.currentEditIndex !== null) {
+          this.deleteLink(this.currentEditIndex);
+          this.closeModal();
+          showNotification('Bookmark deleted.', 2000);
+        }
+      });
+      document.getElementById('linkModal').addEventListener('click', (e) => {
+        if (e.target.id === 'linkModal') this.closeModal();
+      });
+      document.getElementById('removeDuplicatesBtn').addEventListener('click', () => this.removeDuplicateLinks());
+      document.getElementById('removeAllBtn').addEventListener('click', () => this.removeAllLinks());
+      document.getElementById('sortOptions').addEventListener('change', (e) => this.sortLinks(e.target.value));
+      document.getElementById('generateDetailsBtn').addEventListener('click', () => this.generateDetailsWithGemini());
+      document.getElementById('smartSearchBtn').addEventListener('click', () => this.smartSearchWithGemini());
+      document.getElementById('summarizeCollectionBtn').addEventListener('click', () => this.summarizeCollectionWithGemini());
+      document.getElementById('closeSummaryModalBtn').addEventListener('click', () => this.closeSummaryModal());
+      document.getElementById('summaryModal').addEventListener('click', (e) => {
+          if (e.target.id === 'summaryModal') this.closeSummaryModal();
+      });
+      document.getElementById('searchInput').addEventListener('input', (e) => this.filterLinks(e.target.value));
+      document.getElementById('askLinkBtn').addEventListener('click', () => this.askAboutLinkWithGemini());
+      document.getElementById('closeAskLinkModalBtn').addEventListener('click', () => this.closeAskLinkModal());
+      document.getElementById('askLinkModal').addEventListener('click', (e) => {
+          if (e.target.id === 'askLinkModal') this.closeAskLinkModal();
+      });
+      document.getElementById('findSitesFeatureBtn').addEventListener('click', () => this.openFindSitesModal());
+      document.getElementById('closeFindSitesModalBtn').addEventListener('click', () => this.closeFindSitesModal());
+      document.getElementById('searchSitesBtn').addEventListener('click', () => this.findSitesWithGemini());
+      document.getElementById('findSitesModal').addEventListener('click', (e) => {
+          if (e.target.id === 'findSitesModal') this.closeFindSitesModal();
+      });
+    }
+    
+    async generateDetailsWithGemini() {
+        const url = document.getElementById('linkUrl').value.trim();
+        if (!url) return showNotification("Please enter a URL first.", 3000);
+        
+        const generateBtn = document.getElementById('generateDetailsBtn');
+        generateBtn.innerHTML = '✨ Generating...';
+        generateBtn.disabled = true;
+
+        const prompt = `Analyze the website at '${url}'. Provide a concise, single-sentence summary, a short descriptive title, and up to 5 relevant keyword tags. Return your response as a valid JSON object with three keys: "title", "summary", and "tags" (which should be an array of strings).`;
+        const config = {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    "title": { "type": "STRING" },
+                    "summary": { "type": "STRING" },
+                    "tags": { "type": "ARRAY", "items": { "type": "STRING" } }
+                },
+                required: ["title", "summary", "tags"]
+            }
+        };
+
+        const resultText = await callGeminiAPI(prompt, config);
+        if (resultText) {
+            try {
+                const parsedJson = JSON.parse(resultText);
+                document.getElementById('linkTitle').value = parsedJson.title || '';
+                document.getElementById('linkDescription').value = parsedJson.summary || '';
+                document.getElementById('linkTags').value = (parsedJson.tags || []).join(', ');
+                showNotification("✨ Details generated successfully!", 2000);
+            } catch (error) {
+                showNotification("Could not parse AI response. Please check console.", 4000);
+                console.error("JSON Parse Error:", error);
+            }
+        }
+        
+        generateBtn.innerHTML = '✨ Auto-Fill Details';
+        generateBtn.disabled = false;
+    }
+    
+    async smartSearchWithGemini() {
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) return showNotification("Please enter a search query first.", 3000);
+
+        const searchBtn = document.getElementById('smartSearchBtn');
+        searchBtn.innerHTML = '✨ Searching...';
+        searchBtn.disabled = true;
+
+        const linkDataForPrompt = Object.entries(this.links)
+            .filter(([, link]) => link)
+            .map(([index, link]) => ({
+                index: parseInt(index, 10),
+                title: link.title,
+                description: link.description,
+                tags: link.tags || []
+            }));
+
+        if (linkDataForPrompt.length === 0) {
+            showNotification("No bookmarks to search.", 3000);
+            searchBtn.innerHTML = '✨ Smart Search';
+            searchBtn.disabled = false;
+            return;
+        }
+
+        const prompt = `Given the following list of bookmarks in JSON format: ${JSON.stringify(linkDataForPrompt)}. And the user query: "${query}". Which bookmarks are most relevant? Return your answer as a JSON object with a single key "relevant_indices" which is an array of the integer indices of the matching bookmarks.`;
+        const config = {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: { "relevant_indices": { "type": "ARRAY", items: { "type": "NUMBER" } } },
+                required: ["relevant_indices"]
+            }
+        };
+
+        const resultText = await callGeminiAPI(prompt, config);
+        if (resultText) {
+            try {
+                const parsedJson = JSON.parse(resultText);
+                this.displaySearchResults(parsedJson.relevant_indices || []);
+                showNotification(`✨ Found ${parsedJson.relevant_indices.length} relevant results.`, 3000);
+            } catch (error) {
+                showNotification("Smart search failed to parse results.", 4000);
+                console.error("Smart Search Parse Error:", error);
+            }
+        }
+        
+        searchBtn.innerHTML = '✨ Smart Search';
+        searchBtn.disabled = false;
+    }
+
+    async summarizeCollectionWithGemini() {
+        const summarizeBtn = document.getElementById('summarizeCollectionBtn');
+        summarizeBtn.innerHTML = '✨ Summarizing...';
+        summarizeBtn.disabled = true;
+        showNotification('Generating summary, this might take a moment...', 3000);
+
+        const condensedLinks = Object.values(this.links)
+            .filter(link => link && document.querySelector(`.link-box[data-index='${Object.keys(this.links).find(key => this.links[key] === link)}']`)?.style.display !== 'none')
+            .map(link => ({ title: link.title, tags: link.tags || [] }));
+
+        if (condensedLinks.length === 0) {
+            this.openSummaryModal("No visible bookmarks to summarize. Add some links or clear your search.");
+            summarizeBtn.innerHTML = '✨ Summarize Collection';
+            summarizeBtn.disabled = false;
+            return;
+        }
+
+        const prompt = `Given this list of saved bookmarks (titles and tags only): ${JSON.stringify(condensedLinks)}. Provide a comprehensive summary highlighting the main themes, common topics, and overall purpose of this collection. Do not include individual link URLs or titles. Keep the summary to 3-4 paragraphs.`;
+        const summary = await callGeminiAPI(prompt);
+        
+        if (summary) {
+            this.openSummaryModal(summary.trim() || "The AI generated an empty summary. Try with more descriptive bookmarks.");
+        } else {
+            this.openSummaryModal("Failed to generate summary. Please try again later.");
+        }
+        
+        summarizeBtn.innerHTML = '✨ Summarize Collection';
+        summarizeBtn.disabled = false;
+    }
+
+    async askAboutLinkWithGemini() {
+        const question = document.getElementById('askQuestionInput').value.trim();
+        const linkIndex = document.getElementById('askLinkModal').dataset.linkIndex;
+        if (!question || linkIndex === undefined) return showNotification("Please enter a question.", 3000);
+        
+        const link = this.links[parseInt(linkIndex, 10)];
+        if (!link || !link.url) return showNotification("Error: Invalid link or URL not found.", 3000);
+
+        const askLinkBtn = document.getElementById('askLinkBtn');
+        const askLinkAnswer = document.getElementById('askLinkAnswer');
+        askLinkBtn.innerHTML = 'Asking...';
+        askLinkBtn.disabled = true;
+        askLinkAnswer.textContent = 'Analyzing the link and thinking...';
+
+        const prompt = `Please analyze the live content of the website at the URL: ${link.url}\n\nBased on the content of that page, please answer the following question: "${question}"\n\nProvide a concise answer. If you cannot access the URL or find the answer on the page, please state that.`;
+        const answer = await callGeminiAPI(prompt);
+        
+        askLinkAnswer.textContent = answer || "Error: Could not get an answer from the AI. The link might be inaccessible or the content too complex.";
+        askLinkBtn.innerHTML = 'Ask AI';
+        askLinkBtn.disabled = false;
+    }
+
+    async findSitesWithGemini() {
+        const promptText = document.getElementById('findSitesPrompt').value.trim();
+        if (!promptText) return showNotification("Please enter a search query for sites.", 3000);
+
+        const searchSitesBtn = document.getElementById('searchSitesBtn');
+        const findSitesResultsDiv = document.getElementById('findSitesResults');
+        searchSitesBtn.innerHTML = 'Searching...';
+        searchSitesBtn.disabled = true;
+        findSitesResultsDiv.innerHTML = 'Searching and classifying sites...';
+
+        const prompt = `Find websites related to "${promptText}". For each site, provide its name, URL, and a brief one-sentence description. Classify each site as 'Paid', 'Free', or 'Open Source'. Return a single valid JSON object with three keys: 'paid', 'free', and 'openSource'. Each key should contain an array of objects, where each object has 'name', 'url', and 'description' properties.`;
+        const config = {
+            responseMimeType: "application/json",
+            responseSchema: {
+                type: "OBJECT",
+                properties: {
+                    paid: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" }, description: { type: "STRING" } } } },
+                    free: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" }, description: { type: "STRING" } } } },
+                    openSource: { type: "ARRAY", items: { type: "OBJECT", properties: { name: { type: "STRING" }, url: { type: "STRING" }, description: { type: "STRING" } } } }
+                }
+            }
+        };
+
+        const resultText = await callGeminiAPI(prompt, config);
+        if (resultText) {
+            try {
+                const classifications = JSON.parse(resultText);
+                this.renderFindSitesResults(classifications);
+            } catch (error) {
+                findSitesResultsDiv.innerHTML = "<p>Failed to parse site results from AI.</p>";
+                console.error("Find Sites Parse Error:", error);
+            }
+        } else {
+            findSitesResultsDiv.innerHTML = "<p>An error occurred while finding sites. Please try again.</p>";
+        }
+        
+        searchSitesBtn.innerHTML = 'Search Sites';
+        searchSitesBtn.disabled = false;
+    }
+
+    renderFindSitesResults(classifications) {
+        const findSitesResultsDiv = document.getElementById('findSitesResults');
+        findSitesResultsDiv.innerHTML = '';
+        const categories = {
+            '💰 Paid Sites': classifications.paid,
+            '🆓 Free Sites': classifications.free,
+            '💡 Open Source Sites': classifications.openSource
+        };
+
+        let hasResults = false;
+        for (const category in categories) {
+            const sites = categories[category];
+            if (sites && sites.length > 0) {
+                hasResults = true;
+                const categoryHeader = document.createElement('h3');
+                categoryHeader.textContent = category;
+                const siteList = document.createElement('ul');
+                sites.forEach(site => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<a href="${site.url}" target="_blank" rel="noopener noreferrer">${site.name}</a><span>${site.description}</span>`;
+                    siteList.appendChild(li);
+                });
+                findSitesResultsDiv.appendChild(categoryHeader);
+                findSitesResultsDiv.appendChild(siteList);
+            }
+        }
+
+        if (!hasResults) {
+            findSitesResultsDiv.innerHTML = '<p>No sites found for your query. Try a different search term.</p>';
+        }
+    }
+
+    openFindSitesModal() {
+        document.getElementById('findSitesPrompt').value = '';
+        document.getElementById('findSitesResults').innerHTML = '';
+        document.getElementById('findSitesModal').classList.add('show');
+        document.getElementById('findSitesPrompt').focus();
+    }
+
+    closeFindSitesModal() {
+        document.getElementById('findSitesModal').classList.remove('show');
+    }
+
+    openSummaryModal(summaryText) {
+        document.getElementById('summaryText').textContent = summaryText;
+        document.getElementById('summaryModal').classList.add('show');
+    }
+
+    closeSummaryModal() {
+        document.getElementById('summaryModal').classList.remove('show');
+    }
+
+    openAskLinkModal(link, index) {
+        document.getElementById('askLinkTitle').textContent = link.title || 'Untitled';
+        document.getElementById('askLinkUrl').textContent = link.url || 'N/A';
+        document.getElementById('askQuestionInput').value = '';
+        document.getElementById('askLinkAnswer').textContent = 'Answer will appear here...';
+        document.getElementById('askLinkModal').dataset.linkIndex = index;
+        document.getElementById('askLinkModal').classList.add('show');
+        document.getElementById('askQuestionInput').focus();
+    }
+
+    closeAskLinkModal() {
+        document.getElementById('askLinkModal').classList.remove('show');
+        document.getElementById('askLinkModal').removeAttribute('data-linkIndex');
+    }
+
+    displaySearchResults(indicesToShow) {
+        document.querySelectorAll('.link-box:not(.empty)').forEach(box => {
+            const linkIndex = parseInt(box.dataset.index, 10);
+            box.style.display = indicesToShow.includes(linkIndex) ? 'flex' : 'none';
+        });
+    }
+
+    filterLinks(query) {
+        const lowerQuery = query.toLowerCase().trim();
+        document.querySelectorAll('.link-box').forEach(box => {
+            if (box.classList.contains('empty')) {
+                box.style.display = lowerQuery ? 'none' : 'flex';
+                return;
+            }
+            const index = parseInt(box.dataset.index, 10);
+            const linkData = this.links[index];
+            if (linkData) {
+                const content = [linkData.title, linkData.url, linkData.description, ...(linkData.tags || [])].join(' ').toLowerCase();
+                box.style.display = content.includes(lowerQuery) ? 'flex' : 'none';
+            }
+        });
+    }
+
+    openModal(index) {
+      this.currentEditIndex = index;
+      const modal = document.getElementById('linkModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalDeleteBtn = document.getElementById('modalDeleteBtn');
+      const link = this.links[index];
+
+      modalTitle.textContent = link ? 'Edit Link' : 'Add New Link';
+      modalDeleteBtn.style.display = link ? 'inline-block' : 'none';
+      document.getElementById('linkUrl').value = link ? link.url : '';
+      document.getElementById('linkTitle').value = link ? (link.customTitle || link.title || '') : '';
+      document.getElementById('linkDescription').value = link ? (link.description || '') : '';
+      document.getElementById('linkTags').value = link && link.tags ? link.tags.join(', ') : '';
+
+      modal.classList.add('show');
+      document.getElementById('linkUrl').focus();
+    }
+
+    closeModal() {
+      document.getElementById('linkModal').classList.remove('show');
+      this.currentEditIndex = null;
+      document.getElementById('linkForm').reset();
+    }
+
+    getHostname(url) {
+        try {
+            let pUrl = url;
+            if (url && typeof url === 'string' && !url.startsWith('http') && url.includes('.')) pUrl = 'https://' + url;
+            return new URL(pUrl).hostname;
+        } catch (e) { return null; }
+    }
+
+    async fetchLinkData(url, customTitle) {
+      let fetchedTitle = customTitle || '';
+      let favicon = this.DEFAULT_FAVICON;
+      const domain = this.getHostname(url);
+      if (domain) {
+        try {
+            const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+            if (res.ok) {
+                const { data } = await res.json();
+                if (!fetchedTitle && data.title) fetchedTitle = data.title;
+                if (data.logo && data.logo.url) favicon = data.logo.url;
+            }
+        } catch (e) { /* Fallback below */ }
+      }
+      if (favicon === this.DEFAULT_FAVICON && domain) favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      if (!fetchedTitle) fetchedTitle = domain || (url.length > 30 ? url.substring(0, 27) + "..." : url);
+      return { url, title: fetchedTitle, customTitle, favicon };
+    }
+
+    async saveLink() {
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.textContent = 'Saving...';
+      saveBtn.disabled = true;
+      try {
+        const urlValue = document.getElementById('linkUrl').value.trim();
+        const customTitle = document.getElementById('linkTitle').value.trim();
+        const description = document.getElementById('linkDescription').value.trim();
+        const tags = document.getElementById('linkTags').value.split(',').map(t => t.trim()).filter(Boolean);
+        const processedUrl = (this.getHostname(urlValue) && !urlValue.startsWith('http')) ? 'https://' + urlValue : urlValue;
+        const linkData = await this.fetchLinkData(processedUrl, customTitle);
+
+        Object.assign(linkData, {
+            url: processedUrl,
+            customTitle, description, tags,
+            addDate: (this.links[this.currentEditIndex] && this.links[this.currentEditIndex].addDate) || Date.now(),
+            lastModified: Date.now()
+        });
+        this.links[this.currentEditIndex] = linkData;
+        this.saveLinks();
+        this.expandGridIfNeeded();
+        this.renderLinks();
+        this.closeModal();
+        showNotification('Bookmark saved!', 2000);
+      } catch (error) {
+         showNotification('Error saving link.', 3000);
+      } finally {
+        saveBtn.textContent = 'Save Link';
+        saveBtn.disabled = false;
+      }
+    }
+
+    expandGridIfNeeded() {
+      const filledBoxes = Object.keys(this.links).length;
+      const requiredBoxes = Math.max(5, filledBoxes + 1);
+      if (this.totalBoxes < requiredBoxes) {
+        const oldTotal = this.totalBoxes;
+        this.totalBoxes = requiredBoxes + 4;
+        const grid = document.getElementById('linkGrid');
+        for (let i = oldTotal; i < this.totalBoxes; i++) {
+          const linkBox = document.createElement('div');
+          linkBox.dataset.index = i;
+          linkBox.className = 'link-box';
+          grid.appendChild(linkBox);
+        }
+      }
+    }
+
+    deleteLink(index) {
+      delete this.links[index];
+      const reindexedLinks = {};
+      let newIndex = 0;
+      Object.values(this.links).forEach(link => { if(link) reindexedLinks[newIndex++] = link; });
+      this.links = reindexedLinks;
+      this.saveLinks();
+      const filledBoxes = Object.keys(this.links).length;
+      const newTotalBoxes = Math.max(24, filledBoxes + 1);
+      if (this.totalBoxes !== newTotalBoxes) {
+        this.totalBoxes = newTotalBoxes;
+        this.createGrid();
+      }
+      this.renderLinks();
+    }
+
+    renderLinks() {
+      if (Object.keys(this.links).length >= this.totalBoxes) this.expandGridIfNeeded();
+      const currentLinkBoxes = document.querySelectorAll('.link-box[data-index]');
+      currentLinkBoxes.forEach(box => {
+        const index = parseInt(box.dataset.index, 10);
+        const link = this.links[index];
+        box.onclick = null;
+        if (link) {
+          box.className = 'link-box';
+          const displayedUrlText = this.getHostname(link.url) || link.url;
+          const titleText = link.customTitle || link.title || 'Untitled';
+          const descriptionText = link.description ? `\n\n${link.description.replace(/"/g, '&quot;')}` : '';
+          const fullTitleForTooltip = `${titleText}${descriptionText}`;
+          const tagsHtml = link.tags && link.tags.length > 0 ? link.tags.map(tag => `<span class="tag-pill">${tag}</span>`).join('') : '';
+
+          box.innerHTML = `
+            <div class="link-content">
+              <img src="${link.favicon || this.DEFAULT_FAVICON}" alt="Favicon" class="link-logo" onerror="this.onerror=null;this.src='${this.DEFAULT_FAVICON}'">
+              <div class="link-title" title="${fullTitleForTooltip}">${titleText}</div>
+              <div class="link-url" title="URL: ${link.url.replace(/"/g, '&quot;')}\nAdded: ${new Date(link.addDate).toLocaleDateString()}">${displayedUrlText}</div>
+            </div>
+            <div class="tags-container">${tagsHtml}</div>
+            <button class="delete-btn">×</button>
+            <button class="ask-ai-btn">?</button>`;
+          box.querySelector('.delete-btn').onclick = (e) => { e.stopPropagation(); this.deleteLink(index); showNotification('Bookmark deleted.', 2000); };
+          box.querySelector('.ask-ai-btn').onclick = (e) => {
+              e.stopPropagation();
+              this.openAskLinkModal(link, index);
+          };
+          box.onclick = (e) => {
+            if (!e.target.classList.contains('delete-btn') && !e.target.classList.contains('ask-ai-btn')) {
+              if (e.ctrlKey || e.metaKey) this.openModal(index);
+              else {
+                const urlToOpen = link.url;
+                if (urlToOpen.startsWith('http')) window.open(urlToOpen, '_blank');
+                else if (this.getHostname(urlToOpen)) window.open('https://' + urlToOpen, '_blank');
+                else showNotification(`Not a clickable URL: ${urlToOpen}`, 3000);
+              }
+            }
+          };
+        } else {
+          box.className = 'link-box empty';
+          box.innerHTML = `<div class="add-icon">+</div><div>Add Bookmark</div>`;
+          box.onclick = () => this.openModal(index);
+        }
+      });
+    }
+
+    loadLinks() {
+      try { return JSON.parse(localStorage.getItem('linkVaultData')) || {}; }
+      catch (e) { return {}; }
+    }
+
+    saveLinks() {
+      try { localStorage.setItem('linkVaultData', JSON.stringify(this.links)); }
+      catch (e) { console.warn("Could not save to localStorage."); }
+    }
+
+    removeDuplicateLinks() {
+        const seenUrls = new Set();
+        const uniqueLinks = [];
+        Object.values(this.links).forEach(link => {
+            if (link && link.url) {
+                if (!seenUrls.has(link.url)) {
+                    seenUrls.add(link.url);
+                    uniqueLinks.push(link);
+                }
+            } else if (link) uniqueLinks.push(link);
+        });
+        const duplicatesFound = Object.keys(this.links).length - uniqueLinks.length;
+        if (duplicatesFound > 0) {
+            this.links = {};
+            uniqueLinks.forEach((link, index) => this.links[index] = link);
+            this.saveLinks(); this.createGrid(); this.renderLinks();
+            showNotification(`${duplicatesFound} duplicates removed.`, 3000);
+        } else showNotification('No duplicates found.', 2000);
+    }
+
+    removeAllLinks() {
+        this.links = {}; this.totalBoxes = 24; this.saveLinks(); this.createGrid(); this.renderLinks();
+        showNotification('All bookmarks removed.', 3000);
+    }
+
+    sortLinks(criteria) {
+        const linkArray = Object.values(this.links).filter(Boolean);
+        if (criteria !== "default") {
+            linkArray.sort((a, b) => {
+                const titleA = (a.title || '').toLowerCase(); const titleB = (b.title || '').toLowerCase();
+                const dateA = a.addDate || 0; const dateB = b.addDate || 0;
+                switch (criteria) {
+                    case 'name_asc': return titleA.localeCompare(titleB);
+                    case 'name_desc': return titleB.localeCompare(titleA);
+                    case 'date_asc': return dateA - dateB;
+                    case 'date_desc': return dateB - dateA;
+                    default: return 0;
+                }
+            });
+        }
+        this.links = {}; linkArray.forEach((link, index) => this.links[index] = link);
+        this.saveLinks(); this.renderLinks();
+        showNotification(`Sorted by ${criteria.replace('_', ' ')}.`, 2000);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    globalLinkManager = new LinkManager();
+    new Sortable(document.getElementById('linkGrid'), {
+      animation: 150, draggable: ".link-box:not(.empty)", onEnd: (evt) => {
+        const ordered = Object.values(globalLinkManager.links);
+        const [moved] = ordered.splice(evt.oldDraggableIndex, 1);
+        ordered.splice(evt.newDraggableIndex, 0, moved);
+        globalLinkManager.links = {}; ordered.forEach((link, i) => globalLinkManager.links[i] = link);
+        globalLinkManager.saveLinks(); globalLinkManager.renderLinks();
+      }
+    });
+
+    const darkToggle = document.getElementById('darkModeToggle');
+    const applyDarkMode = () => {
+        const isDark = localStorage.getItem('darkMode') === 'true';
+        document.body.classList.toggle('dark', isDark); darkToggle.checked = isDark;
+    };
+    darkToggle.addEventListener('change', () => {
+        localStorage.setItem('darkMode', darkToggle.checked); applyDarkMode();
+    });
+    applyDarkMode();
+
+    const setupFileHandler = (btnId, inputId, handler) => {
+        document.getElementById(btnId).addEventListener('click', () => document.getElementById(inputId).click());
+        document.getElementById(inputId).addEventListener('change', (e) => {
+            if (e.target.files[0]) handler(e.target.files[0]); e.target.value = null;
+        });
+    };
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+        const links = Object.values(globalLinkManager.links).filter(Boolean);
+        if (links.length === 0) return showNotification("No bookmarks to export.", 2000);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(links, null, 2)], { type: 'application/json' }));
+        a.download = 'linkvault_export.json'; a.click(); URL.revokeObjectURL(a.href);
+    });
+
+    setupFileHandler('importBtn', 'importInput', async (file) => {
+        try {
+            const imported = JSON.parse(await file.text());
+            if (!Array.isArray(imported)) throw new Error("Invalid format");
+            let nextIndex = Object.keys(globalLinkManager.links).length;
+            imported.forEach(link => { if (link && link.url) globalLinkManager.links[nextIndex++] = link; });
+            globalLinkManager.saveLinks(); globalLinkManager.createGrid(); globalLinkManager.renderLinks();
+        } catch (err) { showNotification('Error importing JSON.', 4000); }
+    });
+
+    document.getElementById('exportHtmlBtn').addEventListener('click', () => {
+        const links = Object.values(globalLinkManager.links).filter(Boolean);
+        if (links.length === 0) return showNotification("No bookmarks to export.", 2000);
+        let html = `<!DOCTYPE NETSCAPE-Bookmark-file-1><TITLE>Bookmarks</TITLE><H1>LinkVault</H1><DL><p>\n`;
+        links.forEach(link => {
+            const date = Math.floor((link.addDate || Date.now()) / 1000);
+            const tags = link.tags ? `TAGS="${link.tags.join(',')}"` : '';
+            html += `<DT><A HREF="${link.url}" ADD_DATE="${date}" ${tags}>${link.title || 'Untitled'}</A>\n`;
+        });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([html + '</DL><p>'], { type: 'text/html' }));
+        a.download = 'linkvault_bookmarks.html'; a.click(); URL.revokeObjectURL(a.href);
+    });
+
+    setupFileHandler('importHtmlBtn', 'importHtmlInput', async (file) => {
+        const doc = new DOMParser().parseFromString(await file.text(), "text/html");
+        const anchors = doc.querySelectorAll("dt > a, a");
+        let nextIndex = Object.keys(globalLinkManager.links).length;
+        anchors.forEach(a => {
+            const href = a.getAttribute("href");
+            if (href) {
+                globalLinkManager.links[nextIndex++] = {
+                    url: href, title: a.textContent.trim() || href,
+                    addDate: (parseInt(a.getAttribute("add_date")) * 1000) || Date.now(),
+                    tags: (a.getAttribute("tags") || "").split(',').filter(Boolean)
+                };
+            }
+        });
+        globalLinkManager.saveLinks(); globalLinkManager.createGrid(); globalLinkManager.renderLinks();
+    });
+  });
+</script>
+</body>
+</html>
