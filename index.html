@@ -307,7 +307,6 @@
       this.links = this.loadLinks();
       this.currentEditIndex = null;
       this.totalBoxes = Math.max(24, Object.keys(this.links).length + 1);
-      // Removed DEFAULT_FAVICON as we now generate dynamic text-based favicons
       this.init();
     }
 
@@ -671,7 +670,9 @@
         try {
             let pUrl = url;
             if (url && typeof url === 'string' && !url.startsWith('http') && url.includes('.')) pUrl = 'https://' + url;
-            return new URL(pUrl).hostname;
+            const hostname = new URL(pUrl).hostname;
+            // Remove 'www.' prefix if present
+            return hostname.startsWith('www.') ? hostname.substring(4) : hostname;
         } catch (e) {
             console.warn(`Invalid URL for hostname extraction: ${url}`, e);
             return null;
@@ -716,15 +717,14 @@
      */
     async fetchLinkData(url, customTitle) {
       let fetchedTitle = customTitle || '';
-      let favicon = null; // Start with null, will be set to a URL or a text-based indicator
+      let favicon = null;
       const domain = this.getHostname(url);
 
       // If there's no valid domain, we can't fetch external metadata.
       if (!domain) {
           console.warn(`Could not extract domain from URL: ${url}. Using URL as title and generic text logo.`);
           if (!fetchedTitle) fetchedTitle = url.length > 30 ? url.substring(0, 27) + "..." : url;
-          // Return with a placeholder indicating a text-based logo is needed
-          return { url, title: fetchedTitle, customTitle, favicon: 'text:' + (domain ? domain[0] : '#') };
+          return { url, title: fetchedTitle, customTitle, favicon: 'text:' + (url[0] || '#').toUpperCase() };
       }
 
       // 1. Try Microlink API first for rich metadata and high-quality logos.
@@ -746,22 +746,21 @@
 
       // If Microlink didn't provide a logo, try the fallback services.
       if (!favicon) {
-          // 2. Try Clearbit Logo API, which is great for company logos.
-          // Add cache-busting parameter to Clearbit URL
-          const clearbitUrl = `https://logo.clearbit.com/${domain}?_=${Date.now()}`;
-          if (await this.checkImageExists(clearbitUrl)) {
-              console.log(`Clearbit found logo for ${domain}: ${clearbitUrl}`);
-              favicon = clearbitUrl;
-          } else {
-              console.warn(`Clearbit logo not found or failed for ${domain}.`);
-              // 3. Fallback to Google's reliable favicon service.
-              // Add cache-busting parameter to Google Favicon URL
-              const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128&_=${Date.now()}`;
-              if (await this.checkImageExists(googleFaviconUrl)) {
-                  console.log(`Google Favicon service found logo for ${domain}: ${googleFaviconUrl}`);
-                  favicon = googleFaviconUrl;
-              } else {
-                  console.warn(`Google Favicon service failed for ${domain}.`);
+          const faviconSources = [
+              `https://logo.clearbit.com/${domain}?_=${Date.now()}`, // Clearbit
+              `https://www.google.com/s2/favicons?domain=${domain}&sz=128&_=${Date.now()}`, // Google Favicon
+              `https://icons.duckduckgo.com/ip3/${domain}.ico`, // DuckDuckGo ICO
+              `https://icons.duckduckgo.com/ip3/${domain}.png`, // DuckDuckGo PNG
+              `https://api.faviconkit.com/${domain}/128`, // FaviconKit
+              `https://${domain}/favicon.ico`, // Common root path ICO
+              `https://${domain}/apple-touch-icon.png` // Common root path Apple Touch Icon
+          ];
+
+          for (const sourceUrl of faviconSources) {
+              if (await this.checkImageExists(sourceUrl)) {
+                  console.log(`Found logo via fallback for ${domain}: ${sourceUrl}`);
+                  favicon = sourceUrl;
+                  break; // Stop at the first successful favicon
               }
           }
       }
@@ -881,14 +880,14 @@
           let logoHtml;
           // Prioritize custom favicon if available and not text-based
           if (link.customFavicon && (link.customFavicon.startsWith('http://') || link.customFavicon.startsWith('https://'))) {
-              logoHtml = `<img src="${link.customFavicon}" alt="Custom Favicon" class="link-logo" onerror="this.onerror=null;this.src='https://img.icons8.com/fluency/48/bookmark.png'">`;
+              logoHtml = `<img src="${link.customFavicon}" alt="Custom Favicon" class="link-logo" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50%\' y=\'50%\' font-size=\'40\' text-anchor=\'middle\' dominant-baseline=\'middle\' fill=\'%232c3e50\'%3E${(displayedUrlText || '#').toUpperCase().substring(0,1)}%3C/text%3E%3C/svg%3E'">`;
           } else if (link.favicon && link.favicon.startsWith('text:')) {
               const char = link.favicon.substring(5); // Get the character after 'text:'
               logoHtml = `<div class="link-logo text-logo">${char}</div>`;
           } else {
-              // Fallback to automatically fetched favicon or generic bookmark icon
-              const defaultImageFavicon = "https://img.icons8.com/fluency/48/bookmark.png";
-              logoHtml = `<img src="${link.favicon || defaultImageFavicon}" alt="Favicon" class="link-logo" onerror="this.onerror=null;this.src='${defaultImageFavicon}'">`;
+              // Fallback to automatically fetched favicon or generate a text-based one if fetch fails
+              // The onerror here ensures that if the fetched favicon URL somehow breaks later, we still get a fallback.
+              logoHtml = `<img src="${link.favicon}" alt="Favicon" class="link-logo" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50%\' y=\'50%\' font-size=\'40\' text-anchor=\'middle\' dominant-baseline=\'middle\' fill=\'%232c3e50\'%3E${(displayedUrlText || '#').toUpperCase().substring(0,1)}%3C/text%3E%3C/svg%3E'">`;
           }
 
           box.innerHTML = `
