@@ -33,7 +33,10 @@
       .link-box.empty div:last-of-type{font-size:0.8rem;font-weight:600;}
       .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(44,62,80,0.3);backdrop-filter:blur(8px);z-index:1000;}
       .modal.show{display:flex;align-items:center;justify-content:center;}
-      .modal-content{background:rgba(255,255,255,0.9);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);padding:35px;border-radius:20px;border:2px solid rgba(100,100,100,0.5);width:90%;max-width:480px;box-shadow:0 15px 40px rgba(44,62,80,0.2);position:relative; transition: background-color 0.3s ease;}
+      .modal-content{background:rgba(255,255,255,0.9);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);padding:35px;border-radius:20px;border:2px solid rgba(100,100,100,0.5);width:90%;max-width:480px;box-shadow:0 15px 40px rgba(44,62,80,0.2);position:relative; transition: background-color 0.3s ease;
+          max-height: 80vh; /* Allow content to take up to 80% of viewport height */
+          overflow-y: auto; /* Enable vertical scrolling if content exceeds max-height */
+      }
       .modal h2{margin-bottom:25px;color:#2c3e50;font-family:'Segoe UI', sans-serif;font-size:1.8rem;font-weight:500;text-align:center;}
       .form-group{margin-bottom:20px;}
       .form-group label{display:block;margin-bottom:8px;color:#34495e;font-weight:600;font-size:0.9rem;}
@@ -184,6 +187,10 @@
        <div class="form-group">
         <label for="linkTags">🏷️ Tags (comma-separated)</label>
         <input id="linkTags" placeholder="e.g., webdev, tutorial, design" type="text"/>
+      </div>
+      <div class="form-group">
+        <label for="linkCustomFavicon">🖼️ Custom Logo URL (optional)</label>
+        <input id="linkCustomFavicon" placeholder="e.g., https://example.com/logo.png" type="url"/>
       </div>
       <div class="form-group">
         <label for="linkDescription">📄 Description (optional)</label>
@@ -646,6 +653,9 @@
       document.getElementById('linkTitle').value = link ? (link.customTitle || link.title || '') : '';
       document.getElementById('linkDescription').value = link ? (link.description || '') : '';
       document.getElementById('linkTags').value = link && link.tags ? link.tags.join(', ') : '';
+      // Populate custom favicon field
+      document.getElementById('linkCustomFavicon').value = link && link.customFavicon ? link.customFavicon : '';
+
 
       modal.classList.add('show');
       document.getElementById('linkUrl').focus();
@@ -780,12 +790,29 @@
         const customTitle = document.getElementById('linkTitle').value.trim();
         const description = document.getElementById('linkDescription').value.trim();
         const tags = document.getElementById('linkTags').value.split(',').map(t => t.trim()).filter(Boolean);
+        const customFavicon = document.getElementById('linkCustomFavicon').value.trim(); // Get custom favicon URL
+
         const processedUrl = (this.getHostname(urlValue) && !urlValue.startsWith('http')) ? 'https://' + urlValue : urlValue;
-        const linkData = await this.fetchLinkData(processedUrl, customTitle);
+        
+        let linkData;
+        if (customFavicon && (customFavicon.startsWith('http://') || customFavicon.startsWith('https://'))) {
+            // If a valid custom favicon URL is provided, use it directly
+            linkData = {
+                url: processedUrl,
+                title: customTitle || processedUrl, // Use custom title or processed URL as fallback
+                customTitle: customTitle,
+                favicon: customFavicon,
+            };
+            showNotification('Using custom logo URL.', 2000);
+        } else {
+            // Otherwise, proceed with automatic favicon fetching
+            linkData = await this.fetchLinkData(processedUrl, customTitle);
+        }
 
         Object.assign(linkData, {
             url: processedUrl,
             customTitle, description, tags,
+            customFavicon: customFavicon, // Store the custom favicon URL for editing
             addDate: (this.links[this.currentEditIndex] && this.links[this.currentEditIndex].addDate) || Date.now(),
             lastModified: Date.now()
         });
@@ -852,11 +879,14 @@
           const tagsHtml = link.tags && link.tags.length > 0 ? link.tags.map(tag => `<span class="tag-pill">${tag}</span>`).join('') : '';
 
           let logoHtml;
-          if (link.favicon && link.favicon.startsWith('text:')) {
+          // Prioritize custom favicon if available and not text-based
+          if (link.customFavicon && (link.customFavicon.startsWith('http://') || link.customFavicon.startsWith('https://'))) {
+              logoHtml = `<img src="${link.customFavicon}" alt="Custom Favicon" class="link-logo" onerror="this.onerror=null;this.src='https://img.icons8.com/fluency/48/bookmark.png'">`;
+          } else if (link.favicon && link.favicon.startsWith('text:')) {
               const char = link.favicon.substring(5); // Get the character after 'text:'
               logoHtml = `<div class="link-logo text-logo">${char}</div>`;
           } else {
-              // Using a generic bookmark icon as a final fallback for image favicons if they fail to load
+              // Fallback to automatically fetched favicon or generic bookmark icon
               const defaultImageFavicon = "https://img.icons8.com/fluency/48/bookmark.png";
               logoHtml = `<img src="${link.favicon || defaultImageFavicon}" alt="Favicon" class="link-logo" onerror="this.onerror=null;this.src='${defaultImageFavicon}'">`;
           }
