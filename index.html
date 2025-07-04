@@ -248,7 +248,7 @@
               ...generationConfig,
           }
       };
-      const apiKey = "AIzaSyB1_pV6pkD1ohLBe18ey0gy6Pz4BRXD8Dg";
+      const apiKey = "";
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
       try {
@@ -645,22 +645,71 @@
         } catch (e) { return null; }
     }
 
+    /**
+     * Helper function to check if an image URL is valid and loads correctly.
+     * @param {string} url - The URL of the image to check.
+     * @returns {Promise<boolean>} - A promise that resolves to true if the image loads, false otherwise.
+     */
+    async checkImageExists(url) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = url;
+        });
+    }
+
+    /**
+     * Fetches metadata for a URL, with an enhanced logo-finding mechanism.
+     * It tries multiple services in a fallback sequence to get the best possible logo.
+     * @param {string} url - The URL to fetch data for.
+     * @param {string} customTitle - A user-provided title, if any.
+     * @returns {Promise<object>} - An object containing the fetched link data.
+     */
     async fetchLinkData(url, customTitle) {
       let fetchedTitle = customTitle || '';
       let favicon = this.DEFAULT_FAVICON;
       const domain = this.getHostname(url);
-      if (domain) {
-        try {
-            const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
-            if (res.ok) {
-                const { data } = await res.json();
-                if (!fetchedTitle && data.title) fetchedTitle = data.title;
-                if (data.logo && data.logo.url) favicon = data.logo.url;
-            }
-        } catch (e) { /* Fallback below */ }
+
+      // If there's no valid domain, we can't fetch metadata.
+      if (!domain) {
+          if (!fetchedTitle) fetchedTitle = url.length > 30 ? url.substring(0, 27) + "..." : url;
+          return { url, title: fetchedTitle, customTitle, favicon };
       }
-      if (favicon === this.DEFAULT_FAVICON && domain) favicon = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-      if (!fetchedTitle) fetchedTitle = domain || (url.length > 30 ? url.substring(0, 27) + "..." : url);
+
+      // 1. Try Microlink API first for rich metadata and high-quality logos.
+      try {
+          const res = await fetch(`https://api.microlink.io/?url=${encodeURIComponent(url)}`);
+          if (res.ok) {
+              const { data } = await res.json();
+              if (!fetchedTitle && data.title) fetchedTitle = data.title;
+              if (data.logo && data.logo.url) {
+                  favicon = data.logo.url;
+              }
+          }
+      } catch (e) {
+          console.warn("Microlink API failed, trying other methods.", e);
+      }
+
+      // If Microlink didn't provide a logo, try the fallback services.
+      if (favicon === this.DEFAULT_FAVICON) {
+          // 2. Try Clearbit Logo API, which is great for company logos.
+          const clearbitUrl = `https://logo.clearbit.com/${domain}`;
+          if (await this.checkImageExists(clearbitUrl)) {
+              favicon = clearbitUrl;
+          } else {
+              // 3. Fallback to Google's reliable favicon service.
+              const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+              // This service usually returns a default icon if not found, so it's a safe bet.
+              favicon = googleFaviconUrl;
+          }
+      }
+      
+      // Final fallback for the title.
+      if (!fetchedTitle) {
+          fetchedTitle = domain || (url.length > 30 ? url.substring(0, 27) + "..." : url);
+      }
+
       return { url, title: fetchedTitle, customTitle, favicon };
     }
 
