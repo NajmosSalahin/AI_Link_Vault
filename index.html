@@ -737,14 +737,16 @@
       // If Microlink didn't provide a logo, try the fallback services.
       if (!favicon) {
           // 2. Try Clearbit Logo API, which is great for company logos.
-          const clearbitUrl = `https://logo.clearbit.com/${domain}`;
+          // Add cache-busting parameter to Clearbit URL
+          const clearbitUrl = `https://logo.clearbit.com/${domain}?_=${Date.now()}`;
           if (await this.checkImageExists(clearbitUrl)) {
               console.log(`Clearbit found logo for ${domain}: ${clearbitUrl}`);
               favicon = clearbitUrl;
           } else {
               console.warn(`Clearbit logo not found or failed for ${domain}.`);
               // 3. Fallback to Google's reliable favicon service.
-              const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+              // Add cache-busting parameter to Google Favicon URL
+              const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128&_=${Date.now()}`;
               if (await this.checkImageExists(googleFaviconUrl)) {
                   console.log(`Google Favicon service found logo for ${domain}: ${googleFaviconUrl}`);
                   favicon = googleFaviconUrl;
