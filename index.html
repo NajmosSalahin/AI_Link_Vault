@@ -366,11 +366,11 @@
           if (e.target.id === 'findSitesModal') this.closeFindSitesModal();
       });
     }
-    
+
     async generateDetailsWithGemini() {
         const url = document.getElementById('linkUrl').value.trim();
         if (!url) return showNotification("Please enter a URL first.", 3000);
-        
+
         const generateBtn = document.getElementById('generateDetailsBtn');
         generateBtn.innerHTML = '✨ Generating...';
         generateBtn.disabled = true;
@@ -402,11 +402,11 @@
                 console.error("JSON Parse Error:", error);
             }
         }
-        
+
         generateBtn.innerHTML = '✨ Auto-Fill Details';
         generateBtn.disabled = false;
     }
-    
+
     async smartSearchWithGemini() {
         const query = document.getElementById('searchInput').value.trim();
         if (!query) return showNotification("Please enter a search query first.", 3000);
@@ -452,7 +452,7 @@
                 console.error("Smart Search Parse Error:", error);
             }
         }
-        
+
         searchBtn.innerHTML = '✨ Smart Search';
         searchBtn.disabled = false;
     }
@@ -476,13 +476,13 @@
 
         const prompt = `Given this list of saved bookmarks (titles and tags only): ${JSON.stringify(condensedLinks)}. Provide a comprehensive summary highlighting the main themes, common topics, and overall purpose of this collection. Do not include individual link URLs or titles. Keep the summary to 3-4 paragraphs.`;
         const summary = await callGeminiAPI(prompt);
-        
+
         if (summary) {
             this.openSummaryModal(summary.trim() || "The AI generated an empty summary. Try with more descriptive bookmarks.");
         } else {
             this.openSummaryModal("Failed to generate summary. Please try again later.");
         }
-        
+
         summarizeBtn.innerHTML = '✨ Summarize Collection';
         summarizeBtn.disabled = false;
     }
@@ -491,7 +491,7 @@
         const question = document.getElementById('askQuestionInput').value.trim();
         const linkIndex = document.getElementById('askLinkModal').dataset.linkIndex;
         if (!question || linkIndex === undefined) return showNotification("Please enter a question.", 3000);
-        
+
         const link = this.links[parseInt(linkIndex, 10)];
         if (!link || !link.url) return showNotification("Error: Invalid link or URL not found.", 3000);
 
@@ -503,7 +503,7 @@
 
         const prompt = `Please analyze the live content of the website at the URL: ${link.url}\n\nBased on the content of that page, please answer the following question: "${question}"\n\nProvide a concise answer. If you cannot access the URL or find the answer on the page, please state that.`;
         const answer = await callGeminiAPI(prompt);
-        
+
         askLinkAnswer.textContent = answer || "Error: Could not get an answer from the AI. The link might be inaccessible or the content too complex.";
         askLinkBtn.innerHTML = 'Ask AI';
         askLinkBtn.disabled = false;
@@ -519,7 +519,8 @@
         searchSitesBtn.disabled = true;
         findSitesResultsDiv.innerHTML = 'Searching and classifying sites...';
 
-        const prompt = `Find websites related to "${promptText}". For each site, provide its name, URL, and a brief one-sentence description. Classify each site as 'Paid', 'Free', or 'Open Source'. Return a single valid JSON object with three keys: 'paid', 'free', and 'openSource'. Each key should contain an array of objects, where each object has 'name', 'url', and 'description' properties.`;
+        // Updated prompt to explicitly ask for categories and clarify the "not working" aspect by focusing on finding *types* of sites.
+        const prompt = `Find websites related to "${promptText}". For each site, provide its name, URL, and a brief one-sentence description. Please categorize these sites into 'Paid', 'Free', and 'Open Source'. If a site could fit multiple categories, pick the primary one. Return a single valid JSON object with three keys: 'paid', 'free', and 'openSource'. Each key should contain an array of objects, where each object has 'name', 'url', and 'description' properties. Focus on providing examples of sites that are generally functional and well-known.`;
         const config = {
             responseMimeType: "application/json",
             responseSchema: {
@@ -538,13 +539,13 @@
                 const classifications = JSON.parse(resultText);
                 this.renderFindSitesResults(classifications);
             } catch (error) {
-                findSitesResultsDiv.innerHTML = "<p>Failed to parse site results from AI.</p>";
+                findSitesResultsDiv.innerHTML = "<p>Failed to parse site results from AI. The AI might not have returned valid JSON.</p>";
                 console.error("Find Sites Parse Error:", error);
             }
         } else {
             findSitesResultsDiv.innerHTML = "<p>An error occurred while finding sites. Please try again.</p>";
         }
-        
+
         searchSitesBtn.innerHTML = 'Search Sites';
         searchSitesBtn.disabled = false;
     }
@@ -568,7 +569,9 @@
                 const siteList = document.createElement('ul');
                 sites.forEach(site => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<a href="${site.url}" target="_blank" rel="noopener noreferrer">${site.name}</a><span>${site.description}</span>`;
+                    // Ensure site.url is a valid URL before setting href
+                    const url = site.url && (site.url.startsWith('http://') || site.url.startsWith('https://')) ? site.url : `https://${site.url}`;
+                    li.innerHTML = `<a href="${url}" target="_blank" rel="noopener noreferrer">${site.name}</a><span>${site.description}</span>`;
                     siteList.appendChild(li);
                 });
                 findSitesResultsDiv.appendChild(categoryHeader);
@@ -764,7 +767,7 @@
               }
           }
       }
-      
+
       // Final fallback for the title.
       if (!fetchedTitle) {
           fetchedTitle = domain || (url.length > 30 ? url.substring(0, 27) + "..." : url);
@@ -792,7 +795,7 @@
         const customFavicon = document.getElementById('linkCustomFavicon').value.trim(); // Get custom favicon URL
 
         const processedUrl = (this.getHostname(urlValue) && !urlValue.startsWith('http')) ? 'https://' + urlValue : urlValue;
-        
+
         let linkData;
         if (customFavicon && (customFavicon.startsWith('http://') || customFavicon.startsWith('https://'))) {
             // If a valid custom favicon URL is provided, use it directly
